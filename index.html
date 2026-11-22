@@ -713,7 +713,7 @@
                 1. date: 결제 날짜 (YYYY-MM-DD 형식. 예: 11/22 이면 2026-11-22. 연도가 없으면 2026년으로 설정)
                 2. vendor: 사용처/가맹점 상호명 (예: 쿠팡)
                 3. amount: 승인 결제 금액 (숫자만 추출, 누적금액 제외)
-                4. memo: 구매한 주요 품목이나 내역 요약 (품목이 안 보이면 빈 문자열 "" 또는 간단한 설명)
+                4. memo: 항상 빈 문자열 "" 로 반환할 것 (사용자가 필요시 직접 입력함)
                 5. category: 다음 중 가장 적절한 항목 하나만 선택 ["임대료", "급여", "퇴직연금", "4대보험료", "세금", "재료", "식비", "기공료", "주차비", "소모품", "의료폐기물", "청소", "전자차트", "세무사", "통신", "렌탈", "공제", "주유소", "의약품", "카드수수료", "유니폼", "보험", "학회", "협회비", "인쇄", "구인", "간판", "서비스", "퇴직금", "회식"] (쿠팡/다이소 등 일반 쇼핑몰이고 품목이 안 보이면 "소모품" 선택)
                 6. payment: 다음 중 하나 선택 ["계좌이체", "하나카드", "롯데카드", "NH카드", "KB카드", "신한카드", "현금", "원천공제", "삼성카드", "우리카드"]
             `;
@@ -779,7 +779,7 @@
                     if (parsed.amount !== undefined && parsed.amount !== null) {
                         document.getElementById('expenseAmount').value = Number(parsed.amount).toLocaleString('ko-KR');
                     }
-                    document.getElementById('expenseMemo').value = parsed.memo || "";
+                    document.getElementById('expenseMemo').value = "";
                     
                     if (parsed.category) {
                         const catSelect = document.getElementById('expenseCategory');
