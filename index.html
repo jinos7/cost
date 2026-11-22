@@ -319,13 +319,23 @@
             </div>
             
             <p class="text-xs text-slate-600 leading-relaxed">
-                구글 시트의 <strong>[확장 프로그램 > Apps Script]</strong>에서 웹 앱으로 배포한 후 발급된 <strong>웹 앱 URL</strong>을 아래에 붙여넣어 주세요. 한 번 저장하면 브라우저에 자동 기억됩니다.
+                구글 시트의 <strong>[확장 프로그램 > Apps Script]</strong>에서 웹 앱으로 배포한 후 발급된 <strong>웹 앱 URL</strong>을 입력해 주세요. 한 번 저장하면 브라우저에 자동 기억됩니다.
             </p>
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Apps Script 웹 앱 URL</label>
                 <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..."
                     class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+
+            <div class="pt-1 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-semibold text-slate-700">Gemini API 키 <span class="font-normal text-slate-400">(외부/모바일 실행 시 필수)</span></label>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-[11px] text-teal-600 hover:underline font-medium">무료 키 발급받기 ↗</a>
+                </div>
+                <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..."
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <p class="text-[11px] text-slate-400 mt-1">HTML 파일을 다운받아 스마트폰에서 열 때 영수증 AI 인식을 위해 필요합니다.</p>
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-2">
@@ -378,13 +388,14 @@
     </div>
 
     <script>
-        // Gemini API 설정 (런타임 환경에서 자동 제공됨)
-        const apiKey = "";
+        // Gemini API 설정 (런타임 환경 기본값 + 사용자 저장 키 지원)
+        const defaultApiKey = "";
         
         // 상태 변수
         let currentBase64Image = null;
         let currentMimeType = "image/jpeg";
         const STORAGE_KEY_URL = "hospital_expense_script_url";
+        const STORAGE_KEY_API = "hospital_expense_gemini_api_key";
         const STORAGE_KEY_VENDORS = "hospital_expense_saved_vendors";
 
         // 초기화
@@ -394,9 +405,11 @@
             // 오늘 날짜 및 해당 월 기본 세팅
             setTodayAsDefault();
 
-            // 저장된 Apps Script URL 불러오기
+            // 저장된 Apps Script URL 및 API 키 불러오기
             const savedUrl = localStorage.getItem(STORAGE_KEY_URL) || "";
+            const savedApiKey = localStorage.getItem(STORAGE_KEY_API) || "";
             document.getElementById('scriptUrlInput').value = savedUrl;
+            document.getElementById('geminiApiKeyInput').value = savedApiKey;
             updateConnectionStatus(savedUrl);
 
             // 거래처 목록 배지 업데이트
@@ -588,13 +601,17 @@
             modal.classList.toggle('hidden');
         }
 
-        // Apps Script URL 저장
+        // Apps Script URL 및 Gemini API 키 저장
         function saveScriptUrl() {
             const url = document.getElementById('scriptUrlInput').value.trim();
+            const userApiKey = document.getElementById('geminiApiKeyInput').value.trim();
+            
             localStorage.setItem(STORAGE_KEY_URL, url);
+            localStorage.setItem(STORAGE_KEY_API, userApiKey);
+            
             updateConnectionStatus(url);
             toggleSettingsModal();
-            showToast("success", "연동 URL 저장 완료", "이제 등록 버튼을 누르면 구글 시트로 바로 전송됩니다.");
+            showToast("success", "설정 저장 완료", "연동 URL과 API 키가 브라우저에 안전하게 저장되었습니다.");
         }
 
         // 클립보드 붙여넣기 처리 (화면 캡처 후 Ctrl+V)
@@ -673,6 +690,15 @@
         async function analyzeCurrentImage() {
             if (!currentBase64Image) return;
 
+            const activeApiKey = localStorage.getItem(STORAGE_KEY_API) || defaultApiKey;
+            
+            // 로컬 파일(file://) 등 외부 환경에서 실행 중인데 API 키가 없는 경우 안내
+            if (!activeApiKey && window.location.protocol === 'file:') {
+                showToast("warning", "Gemini API 키 설정 필요", "스마트폰/PC에서 직접 파일을 열 때는 우측 상단 [시트 연동 설정]에서 무료 Gemini API 키를 한 번 입력해 주세요.");
+                toggleSettingsModal();
+                return;
+            }
+
             const overlay = document.getElementById('aiLoadingOverlay');
             overlay.classList.remove('hidden');
 
@@ -724,7 +750,7 @@
                 }
             };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${activeApiKey}`;
 
             try {
                 const response = await fetchWithRetry(apiUrl, {
