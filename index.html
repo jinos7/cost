@@ -242,7 +242,8 @@
                     <div>
                         <label for="expenseAmount" class="block text-xs font-semibold text-slate-600 mb-1.5">금액 (원) <span class="text-rose-500">*</span></label>
                         <div class="relative">
-                            <input type="number" id="expenseAmount" placeholder="0" required min="0"
+                            <input type="text" inputmode="numeric" id="expenseAmount" placeholder="0" required
+                                oninput="formatAmountInput(this)"
                                 class="w-full pl-3.5 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-right focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
                             <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">원</span>
                         </div>
@@ -283,20 +284,6 @@
                     </button>
                 </div>
             </form>
-        </section>
-
-        <!-- 3. 최근 등록 내역 (로컬 임시 기록) -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
-                    <i data-lucide="history" class="w-4 h-4 text-slate-400"></i>
-                    오늘 이 기기에서 등록한 내역
-                </h3>
-                <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-rose-500 transition">기록 비우기</button>
-            </div>
-            <div id="recentList" class="divide-y divide-slate-100 text-sm">
-                <p class="text-xs text-slate-400 py-4 text-center">아직 등록된 내역이 없습니다.</p>
-            </div>
         </section>
 
     </main>
@@ -381,7 +368,6 @@
         let currentBase64Image = null;
         let currentMimeType = "image/jpeg";
         const STORAGE_KEY_URL = "hospital_expense_script_url";
-        const STORAGE_KEY_HISTORY = "hospital_expense_recent_history";
         const STORAGE_KEY_VENDORS = "hospital_expense_saved_vendors";
 
         // 초기화
@@ -396,9 +382,8 @@
             document.getElementById('scriptUrlInput').value = savedUrl;
             updateConnectionStatus(savedUrl);
 
-            // 거래처 목록 및 최근 내역 렌더링
+            // 거래처 목록 배지 업데이트
             updateVendorCountBadge();
-            renderRecentHistory();
 
             // 클립보드 붙여넣기(Ctrl+V) 이벤트 리스너 등록 (자동으로 스캔 모드로 전환)
             window.addEventListener('paste', handlePasteEvent);
@@ -433,6 +418,16 @@
             if (!dateVal) return;
             const month = parseInt(dateVal.split('-')[1], 10);
             document.getElementById('expenseMonth').value = `${month}월`;
+        }
+
+        // 금액 입력 시 3자리마다 쉼표 자동 포맷팅
+        function formatAmountInput(input) {
+            const rawDigits = input.value.replace(/[^0-9]/g, '');
+            if (!rawDigits) {
+                input.value = '';
+                return;
+            }
+            input.value = Number(rawDigits).toLocaleString('ko-KR');
         }
 
         // 입력 모드 전환 (직접 입력 vs 영수증 스캔)
@@ -727,7 +722,9 @@
                         syncMonthWithDate();
                     }
                     if (parsed.vendor) document.getElementById('expenseVendor').value = parsed.vendor;
-                    if (parsed.amount !== undefined) document.getElementById('expenseAmount').value = parsed.amount;
+                    if (parsed.amount !== undefined) {
+                        document.getElementById('expenseAmount').value = Number(parsed.amount).toLocaleString('ko-KR');
+                    }
                     if (parsed.memo) document.getElementById('expenseMemo').value = parsed.memo;
                     if (parsed.category) {
                         const catSelect = document.getElementById('expenseCategory');
@@ -796,7 +793,7 @@
                 date: document.getElementById('expenseDate').value,
                 category: document.getElementById('expenseCategory').value,
                 vendor: vendorName,
-                amount: Number(document.getElementById('expenseAmount').value),
+                amount: Number(document.getElementById('expenseAmount').value.replace(/,/g, '')) || 0,
                 payment: document.getElementById('expensePayment').value,
                 memo: document.getElementById('expenseMemo').value.trim()
             };
@@ -815,7 +812,6 @@
 
                 if (result.status === "success") {
                     showToast("success", "시트 등록 완료!", result.message);
-                    saveToRecentHistory(expenseData);
                     
                     // 입력 폼 초기화 (해당 월, 날짜, 결제방법은 연속 입력 편의를 위해 유지)
                     document.getElementById('expenseVendor').value = "";
@@ -832,47 +828,6 @@
                 submitBtn.innerHTML = originalBtnHtml;
                 lucide.createIcons();
             }
-        }
-
-        // 로컬 최근 기록 저장 및 렌더링
-        function saveToRecentHistory(item) {
-            const list = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) || "[]");
-            list.unshift({ ...item, timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) });
-            if (list.length > 10) list.pop();
-            localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(list));
-            renderRecentHistory();
-        }
-
-        function renderRecentHistory() {
-            const container = document.getElementById('recentList');
-            const list = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) || "[]");
-
-            if (list.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">아직 등록된 내역이 없습니다.</p>`;
-                return;
-            }
-
-            container.innerHTML = list.map(entry => `
-                <div class="py-3 flex items-center justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700">${entry.month || ''}</span>
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">${entry.category}</span>
-                            <span class="font-semibold text-slate-800 truncate">${entry.vendor}</span>
-                        </div>
-                        <p class="text-xs text-slate-500 truncate mt-0.5">${entry.date} · ${entry.payment}${entry.memo ? ' · ' + entry.memo : ''}</p>
-                    </div>
-                    <div class="text-right shrink-0">
-                        <p class="font-bold text-slate-900">${Number(entry.amount).toLocaleString()}원</p>
-                        <p class="text-[11px] text-emerald-600 font-medium">전송됨 (${entry.timestamp})</p>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function clearHistory() {
-            localStorage.removeItem(STORAGE_KEY_HISTORY);
-            renderRecentHistory();
         }
 
         // 커스텀 알림 배너 표시 함수
