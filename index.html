@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 병원 경비 등록기 (2026년 경비)</title>
+    <!-- Tailwind CSS 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- 상단 네비게이션 바 -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="bg-teal-600 text-white p-2 rounded-xl shadow-sm">
+                    <i data-lucide="receipt" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-slate-900 leading-tight">병원 경비 스캐너</h1>
+                    <p class="text-xs text-slate-500">2026년 경비 시트 자동 연동</p>
+                </div>
+            </div>
+            
+            <!-- 구글 시트 연동 설정 버튼 -->
+            <button onclick="toggleSettingsModal()" class="flex items-center space-x-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition">
+                <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i>
+                <span class="hidden sm:inline">시트 연동 설정</span>
+                <span id="connectionStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+            </button>
+        </div>
+        <!-- 1. 입력 방식 선택 탭 (직접 입력 vs 영수증 AI 스캔) -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-bold text-base text-slate-900 flex items-center gap-2">
+                    <span class="bg-teal-100 text-teal-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">1</span>
+                    입력 방식 선택
+                </h2>
+                <div class="inline-flex rounded-xl bg-slate-100 p-1">
+                    <button type="button" id="tabManualBtn" onclick="switchInputMode('manual')"
+                        class="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-white text-teal-700 shadow-xs transition">
+                        ✍️ 직접 입력
+                    </button>
+                    <button type="button" id="tabScanBtn" onclick="switchInputMode('scan')"
+                        class="px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition">
+                        📷 영수증 사진/캡처
+                    </button>
+                </div>
+            </div>
+
+            <!-- 직접 입력 모드 안내 -->
+            <div id="manualModeInfo" class="bg-teal-50/60 border border-teal-100 rounded-xl p-3.5 flex items-center justify-between text-xs text-teal-800">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="zap" class="w-4 h-4 text-teal-600 shrink-0"></i>
+                    <span>영수증 없이 아래 양식에 바로 입력하세요. <strong>오늘 날짜와 해당 월</strong>이 자동 지정되며, 이전에 입력한 <strong>거래처는 자동완성</strong>됩니다.</span>
+                </div>
+            </div>
+
+            <!-- 영수증 스캔 모드 (드래그 & 드롭 / 붙여넣기 / 카메라 영역) -->
+            <div id="dropZone" class="hidden relative border-2 border-dashed border-slate-300 hover:border-teal-500 bg-slate-50/70 rounded-2xl p-6 text-center transition-colors cursor-pointer group">
+                
+                <!-- 초기 안내 화면 -->
+                <div id="uploadPrompt" class="space-y-4">
+                    <div class="w-14 h-14 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mx-auto text-teal-600 group-hover:scale-105 transition-transform">
+                        <i data-lucide="camera" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-slate-700 text-sm sm:text-base">영수증을 촬영하거나 캡처 화면을 붙여넣으세요</p>
+                        <p class="text-xs text-slate-500 mt-1">PC에서는 캡처 후 <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-600 font-mono">Ctrl + V</kbd> 로 바로 붙여넣기 가능</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                        <!-- 모바일 카메라 직접 실행 버튼 -->
+                        <label class="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-xl shadow-sm cursor-pointer transition">
+                            <i data-lucide="camera" class="w-4 h-4"></i>
+                            <span>사진 촬영</span>
+                            <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleImageFile(this.files[0])">
+                        </label>
+
+                        <!-- 파일/갤러리 선택 버튼 -->
+                        <label class="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium rounded-xl shadow-sm cursor-pointer transition">
+                            <i data-lucide="image" class="w-4 h-4 text-slate-500"></i>
+                            <span>앨범 / 파일 선택</span>
+                            <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImageFile(this.files[0])">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 이미지 미리보기 및 AI 분석 로딩 상태 -->
+                <div id="previewContainer" class="hidden space-y-4">
+                    <div class="relative max-h-64 overflow-hidden rounded-xl border border-slate-200 bg-slate-900/5 flex items-center justify-center">
+                        <img id="receiptPreview" src="" alt="영수증 미리보기" class="max-h-64 w-auto object-contain rounded-lg">
+                        
+                        <!-- AI 분석 중 오버레이 -->
+                        <div id="aiLoadingOverlay" class="hidden absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4">
+                            <div class="w-10 h-10 border-4 border-teal-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+                            <p class="font-semibold text-sm">Gemini AI가 영수증을 분석 중입니다...</p>
+                            <p class="text-xs text-slate-300 mt-1">날짜, 상호명, 금액, 분류를 자동으로 추출합니다</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-center gap-3">
+                        <button type="button" onclick="analyzeCurrentImage()" id="reAnalyzeBtn" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold rounded-xl transition">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            <span>AI 다시 분석하기</span>
+                        </button>
+                        <button type="button" onclick="resetImage()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span>사진 지우기</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 경비 내역 입력 및 시트 전송 폼 -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="font-bold text-base text-slate-900 flex items-center gap-2">
+                    <span class="bg-teal-100 text-teal-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
+                    경비 내역 입력
+                </h2>
+                <button type="button" onclick="toggleVendorModal()" class="text-xs font-medium text-slate-500 hover:text-teal-700 flex items-center gap-1 bg-slate-100 hover:bg-teal-50 px-2.5 py-1 rounded-lg transition">
+                    <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                    <span>저장된 거래처 관리 (<span id="vendorCountBadge">0</span>)</span>
+                </button>
+            </div>
+
+            <form id="expenseForm" onsubmit="submitExpense(event)" class="space-y-4">
+                <!-- 1행: 해당 월 & 결제 날짜 (당일 자동 기본값) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- 해당 월 (시트 선택) -->
+                    <div>
+                        <label for="expenseMonth" class="block text-xs font-semibold text-slate-600 mb-1.5">해당 월 (시트) <span class="text-rose-500">*</span></label>
+                        <select id="expenseMonth" required
+                            class="w-full px-3.5 py-2.5 bg-teal-50/50 border border-teal-200 text-teal-900 font-semibold rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
+                            <option value="1월">1월</option>
+                            <option value="2월">2월</option>
+                            <option value="3월">3월</option>
+                            <option value="4월">4월</option>
+                            <option value="5월">5월</option>
+                            <option value="6월">6월</option>
+                            <option value="7월">7월</option>
+                            <option value="8월">8월</option>
+                            <option value="9월">9월</option>
+                            <option value="10월">10월</option>
+                            <option value="11월">11월</option>
+                            <option value="12월">12월</option>
+                        </select>
+                    </div>
+
+                    <!-- 결제 날짜 (오늘 날짜 기본값) -->
+                    <div>
+                        <label for="expenseDate" class="block text-xs font-semibold text-slate-600 mb-1.5">날짜 <span class="text-rose-500">*</span></label>
+                        <input type="date" id="expenseDate" required onchange="syncMonthWithDate()"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
+                    </div>
+                </div>
+
+                <!-- 2행: 분류 & 거래처 (자동완성 지원) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- 경비 분류 -->
+                    <div>
+                        <label for="expenseCategory" class="block text-xs font-semibold text-slate-600 mb-1.5">분류 <span class="text-rose-500">*</span></label>
+                        <select id="expenseCategory" required
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
+                            <option value="임대료">임대료</option>
+                            <option value="급여">급여</option>
+                            <option value="퇴직연금">퇴직연금</option>
+                            <option value="4대보험료">4대보험료</option>
+                            <option value="세금">세금</option>
+                            <option value="재료">재료</option>
+                            <option value="식비" selected>식비</option>
+                            <option value="기공료">기공료</option>
+                            <option value="주차비">주차비</option>
+                            <option value="소모품">소모품</option>
+                            <option value="의료폐기물">의료폐기물</option>
+                            <option value="청소">청소</option>
+                            <option value="전자차트">전자차트</option>
+                            <option value="세무사">세무사</option>
+                            <option value="통신">통신</option>
+                            <option value="렌탈">렌탈</option>
+                            <option value="공제">공제</option>
+                            <option value="주유소">주유소</option>
+                            <option value="의약품">의약품</option>
+                            <option value="카드수수료">카드수수료</option>
+                            <option value="유니폼">유니폼</option>
+                            <option value="보험">보험</option>
+                            <option value="학회">학회</option>
+                            <option value="협회비">협회비</option>
+                            <option value="인쇄">인쇄</option>
+                            <option value="구인">구인</option>
+                            <option value="간판">간판</option>
+                            <option value="서비스">서비스</option>
+                            <option value="퇴직금">퇴직금</option>
+                            <option value="회식">회식</option>
+                        </select>
+                    </div>
+
+                    <!-- 거래처 (자동완성 커스텀 드롭다운 + 브라우저 datalist) -->
+                    <div class="relative">
+                        <label for="expenseVendor" class="block text-xs font-semibold text-slate-600 mb-1.5">
+                            거래처 <span class="text-rose-500">*</span>
+                            <span class="text-[11px] font-normal text-teal-600 ml-1">(앞 글자 입력 시 자동완성)</span>
+                        </label>
+                        <input type="text" id="expenseVendor" autocomplete="off"
+                            placeholder="거래처명 입력 (예: 본죽, 메디칼상사)" required
+                            oninput="handleVendorInput(this.value)"
+                            onfocus="handleVendorInput(this.value)"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
+                        
+                        <!-- 자동완성 추천 목록 드롭다운 -->
+                        <div id="vendorAutocompleteList" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-20 divide-y divide-slate-100">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3행: 금액 & 결제방법 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- 결제 금액 -->
+                    <div>
+                        <label for="expenseAmount" class="block text-xs font-semibold text-slate-600 mb-1.5">금액 (원) <span class="text-rose-500">*</span></label>
+                        <div class="relative">
+                            <input type="number" id="expenseAmount" placeholder="0" required min="0"
+                                class="w-full pl-3.5 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-right focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">원</span>
+                        </div>
+                    </div>
+
+                    <!-- 결제 방법 -->
+                    <div>
+                        <label for="expensePayment" class="block text-xs font-semibold text-slate-600 mb-1.5">결제방법 <span class="text-rose-500">*</span></label>
+                        <select id="expensePayment" required
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
+                            <option value="계좌이체">계좌이체</option>
+                            <option value="하나카드">하나카드</option>
+                            <option value="롯데카드">롯데카드</option>
+                            <option value="NH카드">NH카드</option>
+                            <option value="KB카드">KB카드</option>
+                            <option value="신한카드">신한카드</option>
+                            <option value="현금">현금</option>
+                            <option value="원천공제">원천공제</option>
+                            <option value="삼성카드">삼성카드</option>
+                            <option value="우리카드">우리카드</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 4행: 메모 (상세 내역 겸용) -->
+                <div>
+                    <label for="expenseMemo" class="block text-xs font-semibold text-slate-600 mb-1.5">메모 (상세 품목 및 비고)</label>
+                    <input type="text" id="expenseMemo" placeholder="예: 점심 식사 4인, A4용지 2박스 등 상세 내용을 입력하세요"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
+                </div>
+
+                <!-- 전송 버튼 -->
+                <div class="pt-2">
+                    <button type="submit" id="submitBtn"
+                        class="w-full py-3.5 px-6 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-bold text-sm sm:text-base rounded-xl shadow-md shadow-teal-600/20 transition flex items-center justify-center gap-2">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>구글 시트에 경비 등록하기</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 3. 최근 등록 내역 (로컬 임시 기록) -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4 text-slate-400"></i>
+                    오늘 이 기기에서 등록한 내역
+                </h3>
+                <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-rose-500 transition">기록 비우기</button>
+            </div>
+            <div id="recentList" class="divide-y divide-slate-100 text-sm">
+                <p class="text-xs text-slate-400 py-4 text-center">아직 등록된 내역이 없습니다.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 구글 Apps Script URL 설정 모달 -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
+                    <i data-lucide="link" class="w-5 h-5 text-teal-600"></i>
+                    구글 시트 웹앱 URL 설정
+                </h3>
+                <button onclick="toggleSettingsModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-600 leading-relaxed">
+                구글 시트의 <strong>[확장 프로그램 > Apps Script]</strong>에서 웹 앱으로 배포한 후 발급된 <strong>웹 앱 URL</strong>을 아래에 붙여넣어 주세요. 한 번 저장하면 브라우저에 자동 기억됩니다.
+            </p>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Apps Script 웹 앱 URL</label>
+                <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..."
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button type="button" onclick="toggleSettingsModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                    취소
+                </button>
+                <button type="button" onclick="saveScriptUrl()" class="px-4 py-2 text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm transition">
+                    저장하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 저장된 거래처 관리 모달 -->
+    <div id="vendorModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
+                    <i data-lucide="building-2" class="w-5 h-5 text-teal-600"></i>
+                    자동완성 거래처 목록
+                </h3>
+                <button onclick="toggleVendorModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-600">
+                경비를 등록할 때마다 거래처가 자동으로 저장되어 다음 입력 시 자동완성됩니다. 자주 쓰는 거래처를 미리 추가하거나 삭제할 수 있습니다.
+            </p>
+
+            <!-- 새 거래처 빠른 추가 -->
+            <div class="flex gap-2">
+                <input type="text" id="newVendorInput" placeholder="새 거래처명 입력..."
+                    class="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <button type="button" onclick="addVendorManually()" class="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-xl transition">
+                    추가
+                </button>
+            </div>
+
+            <!-- 저장된 거래처 태그 목록 -->
+            <div id="savedVendorTags" class="max-h-48 overflow-y-auto flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+            </div>
+
+            <div class="flex justify-end pt-1">
+                <button type="button" onclick="toggleVendorModal()" class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gemini API 설정 (런타임 환경에서 자동 제공됨)
+        const apiKey = "";
+        
+        // 상태 변수
+        let currentBase64Image = null;
+        let currentMimeType = "image/jpeg";
+        const STORAGE_KEY_URL = "hospital_expense_script_url";
+        const STORAGE_KEY_HISTORY = "hospital_expense_recent_history";
+        const STORAGE_KEY_VENDORS = "hospital_expense_saved_vendors";
+
+        // 초기화
+        window.onload = () => {
+            lucide.createIcons();
+            
+            // 오늘 날짜 및 해당 월 기본 세팅
+            setTodayAsDefault();
+
+            // 저장된 Apps Script URL 불러오기
+            const savedUrl = localStorage.getItem(STORAGE_KEY_URL) || "";
+            document.getElementById('scriptUrlInput').value = savedUrl;
+            updateConnectionStatus(savedUrl);
+
+            // 거래처 목록 및 최근 내역 렌더링
+            updateVendorCountBadge();
+            renderRecentHistory();
+
+            // 클립보드 붙여넣기(Ctrl+V) 이벤트 리스너 등록 (자동으로 스캔 모드로 전환)
+            window.addEventListener('paste', handlePasteEvent);
+            
+            // 외부 클릭 시 거래처 자동완성 목록 닫기
+            document.addEventListener('click', (e) => {
+                const vendorInput = document.getElementById('expenseVendor');
+                const dropdown = document.getElementById('vendorAutocompleteList');
+                if (e.target !== vendorInput && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+            
+            // 드래그 앤 드롭 이벤트 리스너 등록
+            setupDragAndDrop();
+        };
+
+        // 오늘 날짜와 해당 월을 기본값으로 설정
+        function setTodayAsDefault() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            
+            document.getElementById('expenseDate').value = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('expenseMonth').value = `${today.getMonth() + 1}월`;
+        }
+
+        // 날짜 입력 변경 시 해당 월 드롭다운도 자동 동기화
+        function syncMonthWithDate() {
+            const dateVal = document.getElementById('expenseDate').value;
+            if (!dateVal) return;
+            const month = parseInt(dateVal.split('-')[1], 10);
+            document.getElementById('expenseMonth').value = `${month}월`;
+        }
+
+        // 입력 모드 전환 (직접 입력 vs 영수증 스캔)
+        function switchInputMode(mode) {
+            const manualBtn = document.getElementById('tabManualBtn');
+            const scanBtn = document.getElementById('tabScanBtn');
+            const manualInfo = document.getElementById('manualModeInfo');
+            const dropZone = document.getElementById('dropZone');
+
+            if (mode === 'manual') {
+                manualBtn.className = "px-3.5 py-1.5 text-xs font-bold rounded-lg bg-white text-teal-700 shadow-xs transition";
+                scanBtn.className = "px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
+                manualInfo.classList.remove('hidden');
+                dropZone.classList.add('hidden');
+            } else {
+                scanBtn.className = "px-3.5 py-1.5 text-xs font-bold rounded-lg bg-white text-teal-700 shadow-xs transition";
+                manualBtn.className = "px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
+                manualInfo.classList.add('hidden');
+                dropZone.classList.remove('hidden');
+            }
+        }
+
+        // --- 거래처 자동완성 관리 기능 ---
+        function getSavedVendors() {
+            const saved = localStorage.getItem(STORAGE_KEY_VENDORS);
+            if (saved) return JSON.parse(saved);
+            // 초기 기본 병원 자주 쓰는 거래처 샘플 (사용자 입력 시 계속 누적됨)
+            const defaults = ["쿠팡", "네이버페이", "본죽", "스타벅스", "파리바게뜨", "다이소"];
+            localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(defaults));
+            return defaults;
+        }
+
+        function saveVendorToList(vendorName) {
+            const cleanName = vendorName.trim();
+            if (!cleanName) return;
+            let vendors = getSavedVendors();
+            // 중복 제거 후 가장 최근 사용한 거래처를 맨 앞으로 배치
+            vendors = vendors.filter(v => v !== cleanName);
+            vendors.unshift(cleanName);
+            if (vendors.length > 100) vendors.pop();
+            localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(vendors));
+            updateVendorCountBadge();
+        }
+
+        function handleVendorInput(query) {
+            const dropdown = document.getElementById('vendorAutocompleteList');
+            const vendors = getSavedVendors();
+            const keyword = query.trim().toLowerCase();
+
+            // 앞 글자 또는 포함 단어로 필터링
+            const matched = keyword === "" 
+                ? vendors.slice(0, 8) // 입력 전 포커스 시 최근 거래처 8개 표시
+                : vendors.filter(v => v.toLowerCase().includes(keyword));
+
+            if (matched.length === 0) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            dropdown.innerHTML = matched.map(vendor => `
+                <button type="button" onclick="selectVendor('${vendor.replace(/'/g, "\\'")}')"
+                    class="w-full text-left px-3.5 py-2.5 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-800 flex items-center justify-between transition">
+                    <span class="font-medium">${vendor}</span>
+                    <span class="text-[11px] text-slate-400">선택</span>
+                </button>
+            `).join('');
+
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectVendor(vendorName) {
+            document.getElementById('expenseVendor').value = vendorName;
+            document.getElementById('vendorAutocompleteList').classList.add('hidden');
+            // 거래처 선택 후 바로 금액 입력칸으로 포커스 이동해 빠른 입력 지원
+            document.getElementById('expenseAmount').focus();
+        }
+
+        function updateVendorCountBadge() {
+            const count = getSavedVendors().length;
+            const badge = document.getElementById('vendorCountBadge');
+            if (badge) badge.textContent = count;
+        }
+
+        function toggleVendorModal() {
+            const modal = document.getElementById('vendorModal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                renderVendorTags();
+            }
+        }
+
+        function renderVendorTags() {
+            const container = document.getElementById('savedVendorTags');
+            const vendors = getSavedVendors();
+            if (vendors.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 w-full text-center py-2">저장된 거래처가 없습니다.</p>`;
+                return;
+            }
+            container.innerHTML = vendors.map(v => `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 shadow-2xs">
+                    <span>${v}</span>
+                    <button type="button" onclick="removeVendor('${v.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-rose-500">
+                        <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                </span>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function addVendorManually() {
+            const input = document.getElementById('newVendorInput');
+            const val = input.value.trim();
+            if (!val) return;
+            saveVendorToList(val);
+            input.value = "";
+            renderVendorTags();
+        }
+
+        function removeVendor(vendorName) {
+            let vendors = getSavedVendors().filter(v => v !== vendorName);
+            localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(vendors));
+            updateVendorCountBadge();
+            renderVendorTags();
+        }
+
+        // 연결 상태 표시 점 업데이트
+        function updateConnectionStatus(url) {
+            const dot = document.getElementById('connectionStatusDot');
+            if (url && url.startsWith("https://script.google.com/")) {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+                dot.title = "구글 시트 연동됨";
+            } else {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+                dot.title = "시트 URL 설정 필요";
+            }
+        }
+
+        // 설정 모달 열기/닫기
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Apps Script URL 저장
+        function saveScriptUrl() {
+            const url = document.getElementById('scriptUrlInput').value.trim();
+            localStorage.setItem(STORAGE_KEY_URL, url);
+            updateConnectionStatus(url);
+            toggleSettingsModal();
+            showToast("success", "연동 URL 저장 완료", "이제 등록 버튼을 누르면 구글 시트로 바로 전송됩니다.");
+        }
+
+        // 클립보드 붙여넣기 처리 (화면 캡처 후 Ctrl+V)
+        function handlePasteEvent(e) {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    switchInputMode('scan'); // 이미지 붙여넣기 시 자동으로 스캔 탭 활성화
+                    const blob = item.getAsFile();
+                    handleImageFile(blob);
+                    break;
+                }
+            }
+        }
+
+        // 드래그 앤 드롭 설정
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            dropZone.addEventListener('dragover', () => {
+                dropZone.classList.add('border-teal-500', 'bg-teal-50/30');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-teal-500', 'bg-teal-50/30');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                dropZone.classList.remove('border-teal-500', 'bg-teal-50/30');
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+                    handleImageFile(files[0]);
+                }
+            });
+        }
+
+        // 이미지 파일 처리 및 미리보기 표시
+        function handleImageFile(file) {
+            if (!file) return;
+            currentMimeType = file.type || "image/jpeg";
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                document.getElementById('receiptPreview').src = dataUrl;
+                document.getElementById('uploadPrompt').classList.add('hidden');
+                document.getElementById('previewContainer').classList.remove('hidden');
+
+                // Base64 순수 데이터 추출
+                currentBase64Image = dataUrl.split(',')[1];
+                
+                // 자동으로 Gemini AI 영수증 분석 실행
+                analyzeCurrentImage();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 이미지 초기화
+        function resetImage() {
+            currentBase64Image = null;
+            document.getElementById('receiptPreview').src = "";
+            document.getElementById('cameraInput').value = "";
+            document.getElementById('fileInput').value = "";
+            document.getElementById('previewContainer').classList.add('hidden');
+            document.getElementById('uploadPrompt').classList.remove('hidden');
+        }
+
+        // Gemini Vision AI로 영수증 분석 (구조화된 JSON 응답)
+        async function analyzeCurrentImage() {
+            if (!currentBase64Image) return;
+
+            const overlay = document.getElementById('aiLoadingOverlay');
+            overlay.classList.remove('hidden');
+
+            const prompt = `
+                이 영수증 또는 결제 내역 캡처 이미지를 분석해서 병원 경비 장부에 입력할 데이터를 추출해줘.
+                1. date: 결제 날짜 (YYYY-MM-DD 형식. 연도가 안 보이면 2026년으로 가정)
+                2. vendor: 거래처/가맹점 상호명
+                3. amount: 총 결제 금액 (숫자만 추출)
+                4. memo: 구매한 주요 품목이나 내역 요약 (예: "점심 식사", "의료용 거즈 외", "사무용품")
+                5. category: 다음 중 가장 적절한 항목 하나만 선택 ["임대료", "급여", "퇴직연금", "4대보험료", "세금", "재료", "식비", "기공료", "주차비", "소모품", "의료폐기물", "청소", "전자차트", "세무사", "통신", "렌탈", "공제", "주유소", "의약품", "카드수수료", "유니폼", "보험", "학회", "협회비", "인쇄", "구인", "간판", "서비스", "퇴직금", "회식"]
+                6. payment: 영수증에 카드사명이 보이면 매칭하고, 없으면 가장 적절한 항목 선택 ["계좌이체", "하나카드", "롯데카드", "NH카드", "KB카드", "신한카드", "현금", "원천공제", "삼성카드", "우리카드"]
+            `;
+
+            const payload = {
+                contents: [
+                    {
+                        role: "user",
+                        parts: [
+                            { text: prompt },
+                            {
+                                inlineData: {
+                                    mimeType: currentMimeType,
+                                    data: currentBase64Image
+                                }
+                            }
+                        ]
+                    }
+                ],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            date: { type: "STRING" },
+                            vendor: { type: "STRING" },
+                            amount: { type: "NUMBER" },
+                            memo: { type: "STRING" },
+                            category: { type: "STRING" },
+                            payment: { type: "STRING" }
+                        },
+                        required: ["date", "vendor", "amount", "memo", "category"]
+                    }
+                }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (jsonText) {
+                    const parsed = JSON.parse(jsonText);
+                    
+                    // 폼 필드에 자동 입력
+                    if (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
+                        document.getElementById('expenseDate').value = parsed.date;
+                        syncMonthWithDate();
+                    }
+                    if (parsed.vendor) document.getElementById('expenseVendor').value = parsed.vendor;
+                    if (parsed.amount !== undefined) document.getElementById('expenseAmount').value = parsed.amount;
+                    if (parsed.memo) document.getElementById('expenseMemo').value = parsed.memo;
+                    if (parsed.category) {
+                        const catSelect = document.getElementById('expenseCategory');
+                        if ([...catSelect.options].some(o => o.value === parsed.category)) {
+                            catSelect.value = parsed.category;
+                        }
+                    }
+                    if (parsed.payment) {
+                        const paySelect = document.getElementById('expensePayment');
+                        if ([...paySelect.options].some(o => o.value === parsed.payment)) {
+                            paySelect.value = parsed.payment;
+                        }
+                    }
+
+                    showToast("success", "영수증 AI 분석 완료!", "추출된 내용을 확인한 후 [구글 시트에 경비 등록하기] 버튼을 눌러주세요.");
+                } else {
+                    throw new Error("응답 데이터를 해석할 수 없습니다.");
+                }
+            } catch (error) {
+                showToast("error", "영수증 인식 실패", "이미지가 흐리거나 인식할 수 없습니다. 직접 입력해 주세요.");
+            } finally {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // 지수 백오프(Exponential Backoff) 적용 fetch 함수
+        async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, options);
+                    if (res.ok) return res;
+                    if (res.status === 429 || res.status >= 500) {
+                        await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+                        continue;
+                    }
+                    return res;
+                } catch (err) {
+                    if (i === retries - 1) throw err;
+                    await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+                }
+            }
+        }
+
+        // 구글 시트로 경비 데이터 전송
+        async function submitExpense(e) {
+            e.preventDefault();
+
+            const vendorName = document.getElementById('expenseVendor').value.trim();
+            // 입력한 거래처를 자동완성 목록에 즉시 저장
+            saveVendorToList(vendorName);
+
+            const scriptUrl = localStorage.getItem(STORAGE_KEY_URL);
+            if (!scriptUrl) {
+                showToast("warning", "구글 시트 연동 URL이 필요합니다", "우측 상단의 [시트 연동 설정] 버튼을 눌러 Apps Script URL을 먼저 등록해 주세요.");
+                toggleSettingsModal();
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>구글 시트에 기록 중...</span>`;
+
+            const expenseData = {
+                month: document.getElementById('expenseMonth').value,
+                date: document.getElementById('expenseDate').value,
+                category: document.getElementById('expenseCategory').value,
+                vendor: vendorName,
+                amount: Number(document.getElementById('expenseAmount').value),
+                payment: document.getElementById('expensePayment').value,
+                memo: document.getElementById('expenseMemo').value.trim()
+            };
+
+            try {
+                // Google Apps Script 웹앱은 CORS 정책 우회를 위해 text/plain으로 전송하는 것이 안정적입니다.
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify(expenseData)
+                });
+
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    showToast("success", "시트 등록 완료!", result.message);
+                    saveToRecentHistory(expenseData);
+                    
+                    // 입력 폼 초기화 (해당 월, 날짜, 결제방법은 연속 입력 편의를 위해 유지)
+                    document.getElementById('expenseVendor').value = "";
+                    document.getElementById('expenseAmount').value = "";
+                    document.getElementById('expenseMemo').value = "";
+                    resetImage();
+                } else {
+                    throw new Error(result.message || "시트 저장 중 오류가 발생했습니다.");
+                }
+            } catch (error) {
+                showToast("error", "전송 실패", "구글 시트 연동 URL이 올바른지, 배포 권한이 '모든 사용자'로 되어 있는지 확인해 주세요.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+                lucide.createIcons();
+            }
+        }
+
+        // 로컬 최근 기록 저장 및 렌더링
+        function saveToRecentHistory(item) {
+            const list = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) || "[]");
+            list.unshift({ ...item, timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) });
+            if (list.length > 10) list.pop();
+            localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(list));
+            renderRecentHistory();
+        }
+
+        function renderRecentHistory() {
+            const container = document.getElementById('recentList');
+            const list = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) || "[]");
+
+            if (list.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">아직 등록된 내역이 없습니다.</p>`;
+                return;
+            }
+
+            container.innerHTML = list.map(entry => `
+                <div class="py-3 flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700">${entry.month || ''}</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">${entry.category}</span>
+                            <span class="font-semibold text-slate-800 truncate">${entry.vendor}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 truncate mt-0.5">${entry.date} · ${entry.payment}${entry.memo ? ' · ' + entry.memo : ''}</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="font-bold text-slate-900">${Number(entry.amount).toLocaleString()}원</p>
+                        <p class="text-[11px] text-emerald-600 font-medium">전송됨 (${entry.timestamp})</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            localStorage.removeItem(STORAGE_KEY_HISTORY);
+            renderRecentHistory();
+        }
+
+        // 커스텀 알림 배너 표시 함수
+        function showToast(type, title, message) {
+            const banner = document.getElementById('toastBanner');
+            const icon = document.getElementById('toastIcon');
+            const titleEl = document.getElementById('toastTitle');
+            const msgEl = document.getElementById('toastMessage');
+
+            banner.className = "rounded-2xl p-4 shadow-md border transition-all duration-300 flex items-start space-x-3";
+            
+            if (type === "success") {
+                banner.classList.add("bg-emerald-50", "border-emerald-200", "text-emerald-900");
+                icon.innerHTML = `<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600"></i>`;
+            } else if (type === "warning") {
+                banner.classList.add("bg-amber-50", "border-amber-200", "text-amber-900");
+                icon.innerHTML = `<i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i>`;
+            } else {
+                banner.classList.add("bg-rose-50", "border-rose-200", "text-rose-900");
+                icon.innerHTML = `<i data-lucide="alert-circle" class="w-5 h-5 text-rose-600"></i>`;
+            }
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+            banner.classList.remove('hidden');
+            lucide.createIcons();
+
+            // 6초 후 자동 숨김
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                hideToast();
+            }, 6000);
+        }
+
+        function hideToast() {
+            document.getElementById('toastBanner').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
