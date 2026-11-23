@@ -8,8 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter & Noto Sans KR -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Tesseract.js: 브라우저 내 OCR 처리 (외부 AI API 불필요) -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -41,7 +39,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg text-slate-900 leading-tight">병원 경비 등록기</h1>
-                    <p class="text-xs text-slate-500">영수증 OCR · 직접 입력 · 구글 시트 자동 연동</p>
+                    <p class="text-xs text-slate-500">직접 입력 · 구글 시트 자동 연동</p>
                 </div>
             </div>
             
@@ -81,60 +79,11 @@
             </div>
         </section>
 
-        <!-- 2. 영수증 OCR: 갤러리 사진에서 거래처·날짜·총액 추출 -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
-            <h2 class="font-bold text-base text-slate-900 flex items-center gap-2 mb-4">
-                <span class="bg-teal-100 text-teal-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
-                영수증 사진에서 정보 가져오기
-                <span class="ml-auto text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">무료 OCR</span>
-            </h2>
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-600 mb-4">
-                갤러리에서 미리 촬영한 영수증 사진을 선택하세요. 거래처·거래날짜·총금액 세 항목을 브라우저에서 인식합니다. 사진은 OCR 처리를 위해 외부 AI 서버로 전송되지 않습니다.
-            </div>
-
-            <input type="file" id="receiptImageInput" accept="image/*" class="hidden" onchange="handleReceiptImage(this.files[0])">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button type="button" onclick="document.getElementById('receiptImageInput').click()"
-                    class="py-3 px-4 border border-dashed border-teal-300 bg-teal-50/50 hover:bg-teal-50 text-teal-800 font-semibold text-sm rounded-xl transition flex items-center justify-center gap-2">
-                    <i data-lucide="image-plus" class="w-4 h-4"></i>
-                    갤러리에서 영수증 선택
-                </button>
-                <button type="button" id="runOcrBtn" onclick="runReceiptOCR()" disabled
-                    class="py-3 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition flex items-center justify-center gap-2">
-                    <i data-lucide="scan-text" class="w-4 h-4"></i>
-                    영수증 정보 인식하기
-                </button>
-            </div>
-
-            <div id="receiptPreviewWrap" class="hidden mt-4">
-                <div class="flex items-center justify-between mb-2">
-                    <span id="receiptFileName" class="text-xs text-slate-500 truncate pr-3"></span>
-                    <button type="button" onclick="clearReceiptImage()" class="text-xs text-rose-500 hover:text-rose-700">사진 제거</button>
-                </div>
-                <img id="receiptPreview" alt="선택한 영수증 미리보기" class="max-h-64 max-w-full mx-auto rounded-lg border border-slate-200 object-contain">
-            </div>
-
-            <div id="ocrProgressWrap" class="hidden mt-4">
-                <div class="flex justify-between text-xs text-slate-600 mb-1.5">
-                    <span id="ocrStatusText">OCR 준비 중...</span>
-                    <span id="ocrPercent" class="font-semibold tabular-nums">0%</span>
-                </div>
-                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div id="ocrProgressBar" class="h-full bg-teal-500 rounded-full transition-all" style="width:0%"></div>
-                </div>
-            </div>
-            <p id="ocrNotice" class="hidden mt-3 text-xs leading-relaxed"></p>
-            <details id="ocrTextDetails" class="hidden mt-3">
-                <summary class="text-xs text-slate-500 cursor-pointer">인식된 원문 확인</summary>
-                <pre id="ocrRawText" class="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] whitespace-pre-wrap break-words max-h-40 overflow-y-auto"></pre>
-            </details>
-        </section>
-
-        <!-- 3. 경비 내역 입력 및 시트 전송 폼 -->
+        <!-- 2. 경비 내역 입력 및 시트 전송 폼 -->
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="font-bold text-base text-slate-900 flex items-center gap-2">
-                    <span class="bg-teal-100 text-teal-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">3</span>
+                    <span class="bg-teal-100 text-teal-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
                     경비 내역 입력
                 </h2>
                 <button type="button" onclick="toggleVendorModal()" class="text-xs font-medium text-slate-500 hover:text-teal-700 flex items-center gap-1 bg-slate-100 hover:bg-teal-50 px-2.5 py-1 rounded-lg transition">
@@ -361,233 +310,10 @@
         const STORAGE_KEY_URL = "hospital_expense_script_url";
         const STORAGE_KEY_VENDORS = "hospital_expense_vendors";
 
-        // --- 영수증 OCR (Tesseract.js, 브라우저 내 처리) ---
-        let selectedReceiptFile = null;
-        let ocrWorkerPromise = null;
-
-        function handleReceiptImage(file) {
-            if (!file) return;
-            if (!file.type || !file.type.startsWith("image/")) {
-                showToast("warning", "이미지 파일을 선택해 주세요", "JPG, PNG 등 이미지 파일만 사용할 수 있습니다.");
-                return;
-            }
-            selectedReceiptFile = file;
-            const previewUrl = URL.createObjectURL(file);
-            const preview = document.getElementById("receiptPreview");
-            const oldUrl = preview.dataset.objectUrl;
-            if (oldUrl) URL.revokeObjectURL(oldUrl);
-            preview.src = previewUrl;
-            preview.dataset.objectUrl = previewUrl;
-            document.getElementById("receiptFileName").textContent = file.name;
-            document.getElementById("receiptPreviewWrap").classList.remove("hidden");
-            document.getElementById("runOcrBtn").disabled = false;
-            document.getElementById("ocrNotice").classList.add("hidden");
-            document.getElementById("ocrTextDetails").classList.add("hidden");
-            document.getElementById("ocrProgressWrap").classList.add("hidden");
-        }
-
-        function clearReceiptImage() {
-            selectedReceiptFile = null;
-            const preview = document.getElementById("receiptPreview");
-            if (preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
-            preview.removeAttribute("src");
-            delete preview.dataset.objectUrl;
-            document.getElementById("receiptImageInput").value = "";
-            document.getElementById("receiptPreviewWrap").classList.add("hidden");
-            document.getElementById("runOcrBtn").disabled = true;
-        }
-
-        async function getOcrWorker() {
-            if (!window.Tesseract) {
-                throw new Error("OCR 엔진을 불러오지 못했습니다. 인터넷 연결을 확인한 후 페이지를 새로고침해 주세요.");
-            }
-            if (!ocrWorkerPromise) {
-                ocrWorkerPromise = Tesseract.createWorker("kor+eng", 1, {
-                    logger: (message) => {
-                        if (message.status) {
-                            const status = document.getElementById("ocrStatusText");
-                            if (status) status.textContent = message.status === "recognizing text" ? "영수증 글자 인식 중..." : "한글 OCR 엔진 준비 중...";
-                        }
-                        if (typeof message.progress === "number") {
-                            const pct = Math.max(0, Math.min(99, Math.round(message.progress * 100)));
-                            const bar = document.getElementById("ocrProgressBar");
-                            const label = document.getElementById("ocrPercent");
-                            if (bar) bar.style.width = pct + "%";
-                            if (label) label.textContent = pct + "%";
-                        }
-                    }
-                });
-            }
-            return await ocrWorkerPromise;
-        }
-
-        function normalizeOcrLines(text) {
-            return text.split(/\r?\n/)
-                .map(line => line.replace(/[|¦]/g, " ").replace(/\s+/g, " ").trim())
-                .filter(Boolean);
-        }
-
-        function extractReceiptDate(lines) {
-            const datePattern = /(20\d{2})\s*[./년-]\s*(\d{1,2})\s*[./월-]\s*(\d{1,2})\s*(?:일)?/;
-            const priorityLines = lines.filter(line => /(승인일시|거래일시|거래일자|결제일시|결제일자|승인일|거래일|일\s*자)/.test(line));
-            const candidates = [...priorityLines, ...lines];
-            for (const line of candidates) {
-                const match = line.match(datePattern);
-                if (match) {
-                    const y = Number(match[1]), m = Number(match[2]), d = Number(match[3]);
-                    const date = new Date(y, m - 1, d);
-                    if (date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d) {
-                        return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-                    }
-                }
-                // 영수증에 흔한 YY.MM.DD 표기. 20년대 날짜로 해석하되 검토 안내를 함께 표시한다.
-                const shortMatch = line.match(/(?:^|\D)(\d{2})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{1,2})(?:\D|$)/);
-                if (shortMatch && /(승인|거래|결제|일시|일자)/.test(line)) {
-                    const y = 2000 + Number(shortMatch[1]), m = Number(shortMatch[2]), d = Number(shortMatch[3]);
-                    const date = new Date(y, m - 1, d);
-                    if (date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d) {
-                        return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-                    }
-                }
-            }
-            return "";
-        }
-
-        function extractReceiptAmount(lines) {
-            // 합계/결제금액/승인금액을 우선하고, 공급가액·부가세는 단독으로 선택하지 않는다.
-            const patterns = [
-                /(?:최종\s*)?결제\s*금액\s*[:：]?\s*([0-9][0-9,]*)\s*원?/,
-                /(?:카드\s*)?승인\s*금액\s*[:：]?\s*([0-9][0-9,]*)\s*원?/,
-                /(?:받으실?\s*)?합계\s*금액?\s*[:：]?\s*([0-9][0-9,]*)\s*원?/,
-                /총\s*금액\s*[:：]?\s*([0-9][0-9,]*)\s*원?/,
-                /청구\s*금액\s*[:：]?\s*([0-9][0-9,]*)\s*원?/,
-                /합\s*계\s*[:：]?\s*([0-9][0-9,]*)\s*원?/
-            ];
-            for (const pattern of patterns) {
-                for (const line of lines) {
-                    const match = line.match(pattern);
-                    if (match) {
-                        const amount = Number(match[1].replace(/,/g, ""));
-                        if (Number.isSafeInteger(amount) && amount > 0) return amount;
-                    }
-                }
-            }
-
-            // 라벨이 없거나 인식되지 않은 경우, 승인 관련 문구가 있는 줄에서 금액을 찾는다.
-            const fallbackLines = lines.filter(line =>
-                /(승인|결제|받을금액|총액)/.test(line) &&
-                !/(공급가액|부가세|세액|봉사료|할인|잔액)/.test(line)
-            );
-            for (const line of fallbackLines) {
-                const amounts = [...line.matchAll(/([0-9][0-9,]{2,})\s*원?/g)]
-                    .map(m => Number(m[1].replace(/,/g, "")))
-                    .filter(n => Number.isSafeInteger(n) && n > 0);
-                if (amounts.length) return amounts[amounts.length - 1];
-            }
-            return null;
-        }
-
-        function extractReceiptVendor(lines) {
-            const labeled = [
-                /(?:가맹점명|상호명|상호|판매자명|판매자|거래처)\s*[:：]?\s*(.+)/,
-                /(?:가맹점|업체명)\s*[:：]?\s*(.+)/
-            ];
-            for (const pattern of labeled) {
-                for (const line of lines) {
-                    const match = line.match(pattern);
-                    if (match && match[1]) {
-                        const value = match[1].replace(/\s{2,}/g, " ").trim();
-                        if (value.length >= 2 && !/^\d/.test(value)) return value.slice(0, 50);
-                    }
-                }
-            }
-
-            // 명시적 상호 라벨이 없으면 상단부에서 사업자·주소·카드 관련 문구를 제외한 후보를 찾는다.
-            const excluded = /(영수증|카드\s*매출|매출전표|거래명세|사업자|등록번호|대표자|전화|TEL|주소|서울특별시|경기도|대한민국|승인번호|카드번호|고객센터|과세|면세|공급가액|부가세|합계|결제|승인|일시|날짜|현금영수증|포인트|적립|www\.|http)/i;
-            for (const line of lines.slice(0, 12)) {
-                const candidate = line.replace(/^[*#\-\s]+|[*#\-\s]+$/g, "").trim();
-                if (candidate.length >= 2 && candidate.length <= 35 &&
-                    !excluded.test(candidate) && !/^[\d\s,./:-]+$/.test(candidate) &&
-                    !/\d{2,}/.test(candidate)) {
-                    return candidate;
-                }
-            }
-            return "";
-        }
-
-        async function runReceiptOCR() {
-            if (!selectedReceiptFile) return;
-            const button = document.getElementById("runOcrBtn");
-            const progressWrap = document.getElementById("ocrProgressWrap");
-            const progressBar = document.getElementById("ocrProgressBar");
-            const percent = document.getElementById("ocrPercent");
-            const status = document.getElementById("ocrStatusText");
-            const notice = document.getElementById("ocrNotice");
-            button.disabled = true;
-            progressWrap.classList.remove("hidden");
-            notice.classList.add("hidden");
-            progressBar.style.width = "0%";
-            percent.textContent = "0%";
-            status.textContent = "OCR 엔진 준비 중...";
-
-            try {
-                const worker = await getOcrWorker();
-                const result = await worker.recognize(selectedReceiptFile, {}, {
-                    blocks: false,
-                    text: true
-                });
-                const rawText = result.data.text || "";
-                const lines = normalizeOcrLines(rawText);
-                const vendor = extractReceiptVendor(lines);
-                const date = extractReceiptDate(lines);
-                const amount = extractReceiptAmount(lines);
-
-                document.getElementById("ocrRawText").textContent = rawText || "(인식된 텍스트가 없습니다.)";
-                document.getElementById("ocrTextDetails").classList.remove("hidden");
-
-                let filled = [];
-                if (vendor) {
-                    document.getElementById("expenseVendor").value = vendor;
-                    saveVendorToList(vendor);
-                    filled.push("거래처");
-                }
-                if (date) {
-                    document.getElementById("expenseDate").value = date;
-                    syncMonthWithDate();
-                    filled.push("거래날짜");
-                }
-                if (amount !== null) {
-                    document.getElementById("expenseAmount").value = amount.toLocaleString("ko-KR");
-                    filled.push("총금액");
-                }
-
-                progressBar.style.width = "100%";
-                percent.textContent = "100%";
-                status.textContent = "인식 완료";
-
-                if (filled.length === 3) {
-                    notice.textContent = "세 항목을 입력했습니다. 아래 입력란에서 영수증과 대조해 날짜·거래처·총금액을 꼭 확인한 뒤 저장해 주세요.";
-                    notice.className = "mt-3 text-xs leading-relaxed text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-3";
-                } else {
-                    const missing = ["거래처", "거래날짜", "총금액"].filter(x => !filled.includes(x));
-                    notice.textContent = `${filled.length ? filled.join("·") + " 인식 완료. " : ""}${missing.join("·")} 항목은 자동으로 찾지 못했습니다. 해당 항목은 직접 입력해 주세요. 인식 결과를 반드시 확인해 주세요.`;
-                    notice.className = "mt-3 text-xs leading-relaxed text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-3";
-                }
-                notice.classList.remove("hidden");
-                if (vendor) document.getElementById("expenseAmount").focus();
-                else document.getElementById("expenseVendor").focus();
-            } catch (error) {
-                console.error("OCR error:", error);
-                notice.textContent = error.message || "영수증을 인식하지 못했습니다. 사진을 다시 선택해 주세요.";
-                notice.className = "mt-3 text-xs leading-relaxed text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-3";
-                notice.classList.remove("hidden");
-            } finally {
-                button.disabled = !selectedReceiptFile;
-            }
-        }
-
         // 페이지 초기화
         window.onload = function() {
+            // 이전 버전에서 저장했던 Gemini API 키가 있다면 더 이상 사용하지 않으므로 삭제
+            localStorage.removeItem("hospital_gemini_api_key");
             lucide.createIcons();
             
             // 1. 오늘 날짜와 해당 월을 기본값으로 자동 세팅
