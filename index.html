@@ -335,7 +335,7 @@
                 </div>
                 <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..."
                     class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                <p class="text-[11px] text-slate-400 mt-1">HTML 파일을 다운받아 스마트폰에서 열 때 영수증 AI 인식을 위해 필요합니다.</p>
+                <p class="text-[11px] text-slate-400 mt-1">GitHub Pages 또는 로컬 파일로 실행할 때 영수증 AI 인식을 위해 필요합니다.</p>
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-2">
@@ -730,16 +730,16 @@
         async function analyzeCurrentImage() {
             if (!currentBase64Image) return;
 
-            const activeApiKey = localStorage.getItem(STORAGE_KEY_API) || defaultApiKey;
+            const activeApiKey = (localStorage.getItem(STORAGE_KEY_API) || defaultApiKey).trim();
+            const overlay = document.getElementById('aiLoadingOverlay');
             
-            // 로컬 파일(file://) 등 외부 환경에서 실행 중인데 API 키가 없는 경우 안내
-            if (!activeApiKey && window.location.protocol === 'file:') {
-                showToast("warning", "Gemini API 키 설정 필요", "스마트폰/PC에서 직접 파일을 열 때는 우측 상단 [시트 연동 설정]에서 무료 Gemini API 키를 한 번 입력해 주세요.");
-                toggleSettingsModal();
+            // API 키가 없는 경우 안내 메시지 표시
+            if (!activeApiKey) {
+                overlay.classList.add('hidden');
+                showToast("warning", "API 키가 없습니다", "우측 상단 [시트 연동 설정] 버튼을 눌러 Gemini API 키를 입력해 주세요.");
                 return;
             }
 
-            const overlay = document.getElementById('aiLoadingOverlay');
             overlay.classList.remove('hidden');
 
             const prompt = `
@@ -787,18 +787,18 @@
                             payment: { type: "STRING" }
                         },
                         required: ["date", "vendor", "amount", "memo", "category", "payment"]
-                    }
                 }
-            };
+            }
+        };
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${activeApiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeApiKey}`;
 
-            try {
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+        try {
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
                 if (!response || !response.ok) {
                     const errText = response ? await response.text() : "네트워크 응답 없음";
