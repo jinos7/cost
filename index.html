@@ -773,25 +773,11 @@
                             }
                         ]
                     }
-                ],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            date: { type: "STRING" },
-                            vendor: { type: "STRING" },
-                            amount: { type: "NUMBER" },
-                            memo: { type: "STRING" },
-                            category: { type: "STRING" },
-                            payment: { type: "STRING" }
-                        },
-                        required: ["date", "vendor", "amount", "memo", "category", "payment"]
-                }
-            }
-        };
+                ]
+            };
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeApiKey}`;
+        // 기존 API 키를 그대로 사용하면서 정식 범용 모델(gemini-2.5-flash)로 호출
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
 
         try {
             const response = await fetchWithRetry(apiUrl, {
