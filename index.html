@@ -364,71 +364,70 @@
             
             <p class="text-xs text-slate-600">
                 경비를 등록할 때마다 거래처가 자동으로 저장되어 다음 입력 시 자동완성됩니다. 자주 쓰는 거래처를 미리 추가하거나 삭제할 수 있습니다.
-        // 이미지 파일 처리 및 미리보기 표시 (모바일 카메라 첫 촬영 즉시 인식 최적화)
-        function handleImageFile(file) {
-            if (!file) return;
+            </p>
 
-            // 카메라 촬영 직후 UI 먼저 전환하여 사용자에게 즉시 반응 표시
-            document.getElementById('uploadPrompt').classList.add('hidden');
-            document.getElementById('previewContainer').classList.remove('hidden');
-            document.getElementById('aiLoadingOverlay').classList.remove('hidden');
+            <!-- 새 거래처 직접 추가 -->
+            <div class="flex gap-2">
+                <input type="text" id="newVendorInput" placeholder="새 거래처명 입력"
+                    class="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <button type="button" onclick="addVendorManually()" class="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-xl transition">
+                    추가
+                </button>
+            </div>
 
-            // FileReader 대신 메모리 효율이 높은 ObjectURL 사용 (첫 촬영 시 모바일 브라우저 멈춤 방지)
-            const objectUrl = URL.createObjectURL(file);
-            const img = new Image();
+            <!-- 저장된 거래처 태그 목록 -->
+            <div id="savedVendorTags" class="max-h-48 overflow-y-auto flex flex-wrap gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-200/80">
+            </div>
 
-            img.onload = function() {
-                try {
-                    const MAX_DIMENSION = 1280;
-                    let width = img.width;
-                    let height = img.height;
+            <div class="flex justify-end pt-1">
+                <button type="button" onclick="toggleVendorModal()" class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
 
-                    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-                        if (width > height) {
-                            height = Math.round((height * MAX_DIMENSION) / width);
-                            width = MAX_DIMENSION;
-                        } else {
-                            width = Math.round((width * MAX_DIMENSION) / height);
-                            height = MAX_DIMENSION;
-                        }
-                    }
+    <!-- JavaScript 로직 -->
+    <script>
+        // 환경에서 제공되는 Gemini API Key 및 사용자 저장 키
+        const defaultApiKey = "";
+        let currentBase64Image = null;
+        let currentMimeType = "image/jpeg";
 
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
+        const STORAGE_KEY_URL = "hospital_expense_script_url";
+        const STORAGE_KEY_API = "hospital_gemini_api_key";
+        const STORAGE_KEY_VENDORS = "hospital_expense_vendors";
 
-                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                    currentMimeType = 'image/jpeg';
-                    currentBase64Image = compressedDataUrl.split(',')[1];
+        // 페이지 초기화
+        window.onload = function() {
+            lucide.createIcons();
+            
+            // 1. 오늘 날짜와 해당 월을 기본값으로 자동 세팅
+            setTodayAsDefault();
 
-                    document.getElementById('receiptPreview').src = compressedDataUrl;
-                    URL.revokeObjectURL(objectUrl);
+            // 2. 저장된 Apps Script URL 및 API 키 불러오기
+            const savedUrl = localStorage.getItem(STORAGE_KEY_URL) || "";
+            const savedApiKey = localStorage.getItem(STORAGE_KEY_API) || "";
+            document.getElementById('scriptUrlInput').value = savedUrl;
+            document.getElementById('geminiApiKeyInput').value = savedApiKey;
+            updateConnectionStatus(savedUrl);
 
-                    // 카메라 앱에서 복귀한 직후 브라우저 렌더링 안정화를 위해 한 프레임 후 분석 실행
-                    requestAnimationFrame(() => {
-                        analyzeCurrentImage();
-                    });
-                } catch (err) {
-                    URL.revokeObjectURL(objectUrl);
-                    document.getElementById('aiLoadingOverlay').classList.add('hidden');
-                    showToast("error", "이미지 처리 오류", "사진을 변환하는 중 문제가 발생했습니다. 다시 시도해 주세요.");
+            // 3. 저장된 거래처 목록 카운트 업데이트
+            updateVendorCountBadge();
+
+            // 4. 클립보드 붙여넣기(Ctrl+V) 이벤트 리스너 등록
+            document.addEventListener('paste', handlePasteEvent);
+
+            // 5. 거래처 입력창 외부 클릭 시 자동완성 드롭다운 닫기
+            document.addEventListener('click', function(e) {
+                const vendorInput = document.getElementById('expenseVendor');
+                const dropdown = document.getElementById('vendorAutocompleteList');
+                if (vendorInput && dropdown && !vendorInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
                 }
-            };
-
-            img.onerror = function() {
-                URL.revokeObjectURL(objectUrl);
-                document.getElementById('aiLoadingOverlay').classList.add('hidden');
-                resetImage();
-                showToast("error", "이미지 로드 실패", "사진 파일을 읽을 수 없습니다. 다시 촬영해 주세요.");
-            };
-
-            img.src = objectUrl;
-        }
             });
             
-            // 드래그 앤 드롭 이벤트 리스너 등록
+            // 6. 드래그 앤 드롭 이벤트 리스너 등록
             setupDragAndDrop();
         };
 
@@ -517,7 +516,6 @@
         function getSavedVendors() {
             const saved = localStorage.getItem(STORAGE_KEY_VENDORS);
             if (saved) return JSON.parse(saved);
-            // 초기 기본 병원 자주 쓰는 거래처 샘플 (사용자 입력 시 계속 누적됨)
             const defaults = ["쿠팡", "네이버페이", "본죽", "스타벅스", "파리바게뜨", "다이소"];
             localStorage.setItem(STORAGE_KEY_VENDORS, JSON.stringify(defaults));
             return defaults;
@@ -527,7 +525,6 @@
             const cleanName = vendorName.trim();
             if (!cleanName) return;
             let vendors = getSavedVendors();
-            // 중복 제거 후 가장 최근 사용한 거래처를 맨 앞으로 배치
             vendors = vendors.filter(v => v !== cleanName);
             vendors.unshift(cleanName);
             if (vendors.length > 100) vendors.pop();
@@ -540,9 +537,8 @@
             const vendors = getSavedVendors();
             const keyword = query.trim().toLowerCase();
 
-            // 앞 글자 또는 포함 단어로 필터링
             const matched = keyword === "" 
-                ? vendors.slice(0, 8) // 입력 전 포커스 시 최근 거래처 8개 표시
+                ? vendors.slice(0, 8)
                 : vendors.filter(v => v.toLowerCase().includes(keyword));
 
             if (matched.length === 0) {
@@ -564,7 +560,6 @@
         function selectVendor(vendorName) {
             document.getElementById('expenseVendor').value = vendorName;
             document.getElementById('vendorAutocompleteList').classList.add('hidden');
-            // 거래처 선택 후 바로 금액 입력칸으로 포커스 이동해 빠른 입력 지원
             document.getElementById('expenseAmount').focus();
         }
 
@@ -653,7 +648,7 @@
             for (let index in items) {
                 const item = items[index];
                 if (item.kind === 'file' && item.type.startsWith('image/')) {
-                    switchInputMode('scan'); // 이미지 붙여넣기 시 자동으로 스캔 탭 활성화
+                    switchInputMode('scan');
                     const blob = item.getAsFile();
                     handleImageFile(blob);
                     break;
@@ -661,15 +656,19 @@
             }
         }
 
-        // 이미지 파일 처리 및 미리보기 표시 (모바일 고화질 사진 자동 리사이징 압축 포함)
+        // 이미지 파일 처리 및 미리보기 표시 (모바일 카메라 첫 촬영 즉시 인식 최적화)
         function handleImageFile(file) {
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    // 스마트폰 고해상도 카메라 사진(4MB~10MB)을 1280px 이하 JPEG로 압축하여 전송 오류 방지
+            document.getElementById('uploadPrompt').classList.add('hidden');
+            document.getElementById('previewContainer').classList.remove('hidden');
+            document.getElementById('aiLoadingOverlay').classList.remove('hidden');
+
+            const objectUrl = URL.createObjectURL(file);
+            const img = new Image();
+
+            img.onload = function() {
+                try {
                     const MAX_DIMENSION = 1280;
                     let width = img.width;
                     let height = img.height;
@@ -695,18 +694,26 @@
                     currentBase64Image = compressedDataUrl.split(',')[1];
 
                     document.getElementById('receiptPreview').src = compressedDataUrl;
-                    document.getElementById('uploadPrompt').classList.add('hidden');
-                    document.getElementById('previewContainer').classList.remove('hidden');
+                    URL.revokeObjectURL(objectUrl);
 
-                    // 자동으로 Gemini AI 영수증 분석 실행
-                    analyzeCurrentImage();
-                };
-                img.onerror = function() {
-                    showToast("error", "이미지 로드 실패", "사진 파일을 읽을 수 없습니다. 다른 사진으로 다시 시도해 주세요.");
-                };
-                img.src = e.target.result;
+                    requestAnimationFrame(() => {
+                        analyzeCurrentImage();
+                    });
+                } catch (err) {
+                    URL.revokeObjectURL(objectUrl);
+                    document.getElementById('aiLoadingOverlay').classList.add('hidden');
+                    showToast("error", "이미지 처리 오류", "사진을 변환하는 중 문제가 발생했습니다. 다시 시도해 주세요.");
+                }
             };
-            reader.readAsDataURL(file);
+
+            img.onerror = function() {
+                URL.revokeObjectURL(objectUrl);
+                document.getElementById('aiLoadingOverlay').classList.add('hidden');
+                resetImage();
+                showToast("error", "이미지 로드 실패", "사진 파일을 읽을 수 없습니다. 다시 촬영해 주세요.");
+            };
+
+            img.src = objectUrl;
         }
 
         // 이미지 초기화
