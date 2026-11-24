@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>병원 경비 직접 입력기 (2026년 경비)</title>
+    <title>스마트 병원 경비 등록기 (2026년 경비)</title>
     <!-- Tailwind CSS 로드 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter & Noto Sans KR -->
@@ -15,7 +15,6 @@
             font-family: 'Noto Sans KR', 'Inter', sans-serif;
             background-color: #f8fafc;
         }
-        /* 커스텀 스크롤바 */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -39,12 +38,12 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg text-slate-900 leading-tight">병원 경비 등록기</h1>
-                    <p class="text-xs text-slate-500">직접 입력 · 구글 시트 자동 연동</p>
+                    <p id="headerYearSubtitle" class="text-xs text-slate-500">2026년 경비 시트 자동 연동</p>
                 </div>
             </div>
             
             <!-- 구글 시트 연동 설정 버튼 -->
-            <button onclick="toggleSettingsModal()" class="flex items-center space-x-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition">
+            <button type="button" onclick="toggleSettingsModal()" class="flex items-center space-x-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition">
                 <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i>
                 <span class="hidden sm:inline">시트 연동 설정</span>
                 <span id="connectionStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
@@ -60,31 +59,19 @@
             <div id="toastIcon" class="shrink-0 mt-0.5"></div>
             <div class="flex-1 text-sm">
                 <p id="toastTitle" class="font-semibold"></p>
-                <p id="toastMessage" class="mt-0.5 opacity-90 text-xs sm:text-sm"></p>
+                <p id="toastMessage" class="mt-0.5 opacity-90 text-xs sm:text-sm break-all"></p>
             </div>
-            <button onclick="hideToast()" class="text-current opacity-60 hover:opacity-100">
+            <button type="button" onclick="hideToast()" class="text-current opacity-60 hover:opacity-100">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
         </div>
 
-        <!-- 1. 직접 입력 안내 -->
+        <!-- 1. 경비 내역 입력 및 시트 전송 폼 -->
+        <!-- 경비 내역 입력 및 시트 전송 폼 -->
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
-            <h2 class="font-bold text-base text-slate-900 flex items-center gap-2 mb-4">
-                <span class="bg-teal-100 text-teal-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">1</span>
-                경비 입력 안내
-            </h2>
-            <div class="bg-teal-50/60 border border-teal-100 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-teal-800">
-                <i data-lucide="edit-3" class="w-4 h-4 text-teal-600 shrink-0 mt-0.5"></i>
-                <span>아래 양식에 경비 내역을 직접 입력해 주세요. <strong>오늘 날짜와 해당 월</strong>이 자동 지정되며, 이전에 입력한 <strong>거래처는 자동완성</strong>됩니다.</span>
-            </div>
-        </section>
-
-        <!-- 2. 경비 내역 입력 및 시트 전송 폼 -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
-            <div class="flex items-center justify-between mb-5">
-                <h2 class="font-bold text-base text-slate-900 flex items-center gap-2">
-                    <span class="bg-teal-100 text-teal-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold">2</span>
-                    경비 내역 입력
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h2 class="font-bold text-base text-slate-900">
+                    경비 내역 직접 입력
                 </h2>
                 <button type="button" onclick="toggleVendorModal()" class="text-xs font-medium text-slate-500 hover:text-teal-700 flex items-center gap-1 bg-slate-100 hover:bg-teal-50 px-2.5 py-1 rounded-lg transition">
                     <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
@@ -92,10 +79,14 @@
                 </button>
             </div>
 
+            <div class="bg-teal-50/60 border border-teal-100 rounded-xl p-3 mb-5 flex items-center gap-2 text-xs text-teal-800">
+                <i data-lucide="zap" class="w-4 h-4 text-teal-600 shrink-0"></i>
+                <span><strong>오늘 날짜와 해당 월</strong>이 자동 지정되며, 이전에 입력한 <strong>거래처는 자동완성</strong>됩니다.</span>
+            </div>
+
             <form id="expenseForm" onsubmit="submitExpense(event)" class="space-y-4">
                 <!-- 1행: 해당 월 & 결제 날짜 (당일 자동 기본값) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- 해당 월 (시트 선택) -->
                     <div>
                         <label for="expenseMonth" class="block text-xs font-semibold text-slate-600 mb-1.5">해당 월 (시트) <span class="text-rose-500">*</span></label>
                         <select id="expenseMonth" required
@@ -115,7 +106,6 @@
                         </select>
                     </div>
 
-                    <!-- 결제 날짜 (오늘 날짜 기본값) -->
                     <div>
                         <label for="expenseDate" class="block text-xs font-semibold text-slate-600 mb-1.5">날짜 <span class="text-rose-500">*</span></label>
                         <input type="date" id="expenseDate" required onchange="syncMonthWithDate()"
@@ -123,9 +113,8 @@
                     </div>
                 </div>
 
-                <!-- 2행: 분류 & 거래처 (자동완성 지원) -->
+                <!-- 2행: 분류 & 거래처 -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- 경비 분류 -->
                     <div>
                         <label for="expenseCategory" class="block text-xs font-semibold text-slate-600 mb-1.5">분류 <span class="text-rose-500">*</span></label>
                         <select id="expenseCategory" required
@@ -163,7 +152,6 @@
                         </select>
                     </div>
 
-                    <!-- 거래처 (자동완성 커스텀 드롭다운 + 브라우저 datalist) -->
                     <div class="relative">
                         <label for="expenseVendor" class="block text-xs font-semibold text-slate-600 mb-1.5">
                             거래처 <span class="text-rose-500">*</span>
@@ -175,7 +163,6 @@
                             onfocus="handleVendorInput(this.value)"
                             class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition">
                         
-                        <!-- 자동완성 추천 목록 드롭다운 -->
                         <div id="vendorAutocompleteList" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-20 divide-y divide-slate-100">
                         </div>
                     </div>
@@ -183,7 +170,6 @@
 
                 <!-- 3행: 금액 & 결제방법 -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- 결제 금액 -->
                     <div>
                         <label for="expenseAmount" class="block text-xs font-semibold text-slate-600 mb-1.5">금액 (원) <span class="text-rose-500">*</span></label>
                         <div class="relative">
@@ -194,7 +180,6 @@
                         </div>
                     </div>
 
-                    <!-- 결제 방법 -->
                     <div>
                         <label for="expensePayment" class="block text-xs font-semibold text-slate-600 mb-1.5">결제방법 <span class="text-rose-500">*</span></label>
                         <select id="expensePayment" required
@@ -213,7 +198,7 @@
                     </div>
                 </div>
 
-                <!-- 4행: 메모 (상세 내역 겸용) -->
+                <!-- 4행: 메모 -->
                 <div>
                     <label for="expenseMemo" class="block text-xs font-semibold text-slate-600 mb-1.5">메모 (상세 품목 및 비고)</label>
                     <input type="text" id="expenseMemo" autocomplete="off" placeholder="예: 점심 식사 4인, A4용지 2박스 등 상세 내용을 입력하세요"
@@ -241,7 +226,7 @@
                     <i data-lucide="link" class="w-5 h-5 text-teal-600"></i>
                     구글 시트 웹앱 URL 설정
                 </h3>
-                <button onclick="toggleSettingsModal()" class="text-slate-400 hover:text-slate-600">
+                <button type="button" onclick="toggleSettingsModal()" class="text-slate-400 hover:text-slate-600">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -256,7 +241,7 @@
                     class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
             </div>
 
-<div class="flex items-center justify-end gap-2 pt-2">
+            <div class="flex items-center justify-end gap-2 pt-2">
                 <button type="button" onclick="toggleSettingsModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
                     취소
                 </button>
@@ -275,7 +260,7 @@
                     <i data-lucide="building-2" class="w-5 h-5 text-teal-600"></i>
                     자동완성 거래처 목록
                 </h3>
-                <button onclick="toggleVendorModal()" class="text-slate-400 hover:text-slate-600">
+                <button type="button" onclick="toggleVendorModal()" class="text-slate-400 hover:text-slate-600">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -284,7 +269,6 @@
                 경비를 등록할 때마다 거래처가 자동으로 저장되어 다음 입력 시 자동완성됩니다. 자주 쓰는 거래처를 미리 추가하거나 삭제할 수 있습니다.
             </p>
 
-            <!-- 새 거래처 직접 추가 -->
             <div class="flex gap-2">
                 <input type="text" id="newVendorInput" placeholder="새 거래처명 입력"
                     class="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
@@ -293,7 +277,6 @@
                 </button>
             </div>
 
-            <!-- 저장된 거래처 태그 목록 -->
             <div id="savedVendorTags" class="max-h-48 overflow-y-auto flex flex-wrap gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-200/80">
             </div>
 
@@ -312,22 +295,20 @@
 
         // 페이지 초기화
         window.onload = function() {
-            // 이전 버전에서 저장했던 Gemini API 키가 있다면 더 이상 사용하지 않으므로 삭제
+            // 이전 버전에서 저장했던 Gemini API 키가 있다면 정리
             localStorage.removeItem("hospital_gemini_api_key");
-            lucide.createIcons();
+            if (window.lucide) {
+                lucide.createIcons();
+            }
             
-            // 1. 오늘 날짜와 해당 월을 기본값으로 자동 세팅
             setTodayAsDefault();
 
-            // 2. 저장된 Apps Script URL 불러오기
             const savedUrl = localStorage.getItem(STORAGE_KEY_URL) || "";
             document.getElementById('scriptUrlInput').value = savedUrl;
             updateConnectionStatus(savedUrl);
 
-            // 3. 저장된 거래처 목록 카운트 업데이트
             updateVendorCountBadge();
 
-            // 5. 거래처 입력창 외부 클릭 시 자동완성 드롭다운 닫기
             document.addEventListener('click', function(e) {
                 const vendorInput = document.getElementById('expenseVendor');
                 const dropdown = document.getElementById('vendorAutocompleteList');
@@ -335,10 +316,8 @@
                     dropdown.classList.add('hidden');
                 }
             });
-            
         };
 
-        // 오늘 날짜와 해당 월을 기본값으로 설정
         function setTodayAsDefault() {
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -347,9 +326,28 @@
             
             document.getElementById('expenseDate').value = `${yyyy}-${mm}-${dd}`;
             document.getElementById('expenseMonth').value = `${today.getMonth() + 1}월`;
+            updateYearDisplay(yyyy);
         }
 
-        // 날짜 입력 변경 시 해당 월 드롭다운도 자동 동기화
+        function syncMonthWithDate() {
+            const dateVal = document.getElementById('expenseDate').value;
+            if (!dateVal) return;
+            const parts = dateVal.split('-');
+            const year = parts[0];
+            const month = parseInt(parts[1], 10);
+            document.getElementById('expenseMonth').value = `${month}월`;
+            updateYearDisplay(year);
+        }
+
+        function updateYearDisplay(year) {
+            if (!year) return;
+            const subtitle = document.getElementById('headerYearSubtitle');
+            if (subtitle) {
+                subtitle.textContent = `${year}년 경비 시트 자동 연동`;
+            }
+            document.title = `병원 경비 등록기 (${year}년 경비)`;
+        }
+
         function syncMonthWithDate() {
             const dateVal = document.getElementById('expenseDate').value;
             if (!dateVal) return;
@@ -357,7 +355,6 @@
             document.getElementById('expenseMonth').value = `${month}월`;
         }
 
-        // 금액 입력 시 3자리마다 쉼표 자동 포맷팅
         function formatAmountInput(input) {
             const rawDigits = input.value.replace(/[^0-9]/g, '');
             if (!rawDigits) {
@@ -367,7 +364,6 @@
             input.value = Number(rawDigits).toLocaleString('ko-KR');
         }
 
-        // --- 거래처 자동완성 관리 기능 ---
         function getSavedVendors() {
             const saved = localStorage.getItem(STORAGE_KEY_VENDORS);
             if (saved) return JSON.parse(saved);
@@ -447,7 +443,7 @@
                     </button>
                 </span>
             `).join('');
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
         function addVendorManually() {
@@ -466,7 +462,6 @@
             renderVendorTags();
         }
 
-        // 연결 상태 표시 점 업데이트
         function updateConnectionStatus(url) {
             const dot = document.getElementById('connectionStatusDot');
             if (url && url.startsWith("https://script.google.com/")) {
@@ -478,27 +473,25 @@
             }
         }
 
-        // 설정 모달 열기/닫기
         function toggleSettingsModal() {
             const modal = document.getElementById('settingsModal');
             modal.classList.toggle('hidden');
         }
 
-        // Apps Script URL 저장
         function saveScriptUrl() {
             const url = document.getElementById('scriptUrlInput').value.trim();
+            
             localStorage.setItem(STORAGE_KEY_URL, url);
+            
             updateConnectionStatus(url);
             toggleSettingsModal();
-            showToast("success", "설정 저장 완료", "구글 시트 연동 URL이 저장되었습니다.");
+            showToast("success", "설정 저장 완료", "연동 URL이 브라우저에 안전하게 저장되었습니다.");
         }
 
-        // 구글 시트로 경비 데이터 전송
         async function submitExpense(e) {
             e.preventDefault();
 
             const vendorName = document.getElementById('expenseVendor').value.trim();
-            // 입력한 거래처를 자동완성 목록에 즉시 저장
             saveVendorToList(vendorName);
 
             const scriptUrl = localStorage.getItem(STORAGE_KEY_URL);
@@ -524,7 +517,6 @@
             };
 
             try {
-                // Google Apps Script 웹앱은 CORS 정책 우회를 위해 text/plain으로 전송하는 것이 안정적입니다.
                 const response = await fetch(scriptUrl, {
                     method: 'POST',
                     headers: {
@@ -538,7 +530,6 @@
                 if (result.status === "success") {
                     showToast("success", "시트 등록 완료!", result.message);
                     
-                    // 입력 폼 초기화 (해당 월, 날짜, 결제방법은 연속 입력 편의를 위해 유지)
                     document.getElementById('expenseVendor').value = "";
                     document.getElementById('expenseAmount').value = "";
                     document.getElementById('expenseMemo').value = "";
@@ -550,11 +541,10 @@
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnHtml;
-                lucide.createIcons();
+                if (window.lucide) lucide.createIcons();
             }
         }
 
-        // 커스텀 알림 배너 표시 함수
         function showToast(type, title, message) {
             const banner = document.getElementById('toastBanner');
             const icon = document.getElementById('toastIcon');
@@ -577,9 +567,8 @@
             titleEl.textContent = title;
             msgEl.textContent = message;
             banner.classList.remove('hidden');
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
 
-            // 6초 후 자동 숨김
             clearTimeout(window.toastTimer);
             window.toastTimer = setTimeout(() => {
                 hideToast();
